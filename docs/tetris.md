@@ -14,23 +14,38 @@ rows disappear and award score; the game ends when a new piece cannot spawn.
 ## Build & Run
 
 ```sh
+# Unix (Linux/macOS) — dynamically links SDL3
 ~/.nimble/bin/nim c sdl3_tetris.nim
 ./sdl3_tetris
+
+# Windows (MSYS2 MINGW64) — statically links SDL3 into a self-contained .exe
+nim c -d:release \
+  --gcc.exe:x86_64-w64-mingw32-gcc --gcc.linkerexe:x86_64-w64-mingw32-gcc \
+  sdl3_tetris.nim
 ```
 
 - Nim 2.4.0 (any recent 2.x should work).
-- Output binary is `sdl3_tetris`, listed in `.gitignore`.
-- Release build: `~/.nimble/bin/nim c -d:release sdl3_tetris.nim`.
+- Output binary is `sdl3_tetris` (Unix) / `sdl3_tetris.exe` (Windows), listed in
+  `.gitignore`.
+- Release build (Unix): `~/.nimble/bin/nim c -d:release sdl3_tetris.nim`.
 
 ## Dependencies
 
-- SDL3, installed at `/usr/local/lib` (headers at `/usr/local/include/SDL3`).
-- Linker flags, passed via Nim's `passL` pragma:
+- SDL3, linked via Nim's `passL` pragma, which selects the flags per platform:
 
 ```nim
-{.passL: "-L/usr/local/lib -Wl,-rpath,/usr/local/lib -lSDL3".}
+when defined(windows):
+  {.passL: "-Wl,-Bstatic -lSDL3 -Wl,-Bdynamic -lkernel32 -luser32 -lgdi32 -lwinmm -limm32 -lole32 -loleaut32 -lversion -luuid -ladvapi32 -lsetupapi -lshell32 -ldinput8".}
+else:
+  {.passL: "-L/usr/local/lib -Wl,-rpath,/usr/local/lib -lSDL3".}
 ```
 
+- **Windows**: SDL3 is linked **statically**, so the `.exe` is self-contained
+  (no `SDL3.dll` beside it; only Windows system DLLs are required). SDL3 must be
+  installed in the MinGW prefix (`mingw64/include/SDL3`, `mingw64/lib`).
+- **Unix (Linux/macOS)**: SDL3 is linked dynamically from `/usr/local/lib`
+  (headers at `/usr/local/include/SDL3`), with an rpath so the binary finds
+  `libSDL3.so` at runtime.
 - Only stdlib module used: `import std/random` (for piece selection). No SDL
   bindings package of any kind.
 

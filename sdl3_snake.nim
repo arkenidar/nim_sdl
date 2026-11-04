@@ -65,7 +65,10 @@ proc SDL_DestroyWindow(window: ptr SDL_Window) {.importc, cdecl.}
 proc SDL_Quit() {.importc, cdecl.}
 proc SDL_GetError(): cstring {.importc, cdecl.}
 
-{.passL: "-L/usr/local/lib -Wl,-rpath,/usr/local/lib -lSDL3".}
+when defined(windows):
+  {.passL: "-Wl,-Bstatic -lSDL3 -Wl,-Bdynamic -lkernel32 -luser32 -lgdi32 -lwinmm -limm32 -lole32 -loleaut32 -lversion -luuid -ladvapi32 -lsetupapi -lshell32 -ldinput8".}
+else:
+  {.passL: "-L/usr/local/lib -Wl,-rpath,/usr/local/lib -lSDL3".}
 
 const
   WinW  = 800
