@@ -67,6 +67,8 @@ proc SDL_GetError(): cstring {.importc, cdecl.}
 
 when defined(windows):
   {.passL: "-Wl,-Bstatic -lSDL3 -Wl,-Bdynamic -lkernel32 -luser32 -lgdi32 -lwinmm -limm32 -lole32 -loleaut32 -lversion -luuid -ladvapi32 -lsetupapi -lshell32 -ldinput8".}
+elif defined(linux):
+  {.passL: "-L/usr/local/lib -Wl,-Bstatic -lSDL3 -Wl,-Bdynamic -pthread -lm".}
 else:
   {.passL: "-L/usr/local/lib -Wl,-rpath,/usr/local/lib -lSDL3".}
 

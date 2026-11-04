@@ -14,10 +14,35 @@ The snake **wraps around** all four edges of the window — there is no wall dea
 
 ## Build & Run
 
+### Prerequisite — build SDL3 from source (Linux static link)
+
+The Linux build statically links SDL3, so SDL3 must first be built from source
+with a static library. Build and install the latest stable SDL3 (3.4.20) into
+`/usr/local`:
+
 ```sh
-# Unix (Linux/macOS) — dynamically links SDL3
+curl -fsSL https://github.com/libsdl-org/SDL/archive/refs/tags/release-3.4.20.tar.gz -o SDL-3.4.20.tar.gz
+tar xf SDL-3.4.20.tar.gz
+cd SDL-release-3.4.20
+cmake -S . -B build -G Ninja \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DCMAKE_INSTALL_PREFIX=/usr/local \
+  -DSDL_SHARED=ON -DSDL_STATIC=ON \
+  -DSDL_TEST_LIBRARY=OFF -DSDL_TESTS=OFF -DSDL_EXAMPLES=OFF
+cmake --build build
+sudo cmake --install build
+```
+
+> SDL3 3.4.x loads its video/audio backends (X11, Wayland, ALSA, …) at runtime
+> via `dlopen`, so `libSDL3.a` only needs `libm`/`libc` — no extra link flags.
+
+```sh
+# Linux — statically links SDL3 into a self-contained ELF
 ~/.nimble/bin/nim c sdl3_snake.nim
 ./sdl3_snake
+
+# macOS (or other Unix) — dynamically links SDL3
+~/.nimble/bin/nim c sdl3_snake.nim
 
 # Windows (MSYS2 MINGW64) — statically links SDL3 into a self-contained .exe
 nim c -d:release \
@@ -28,7 +53,7 @@ nim c -d:release \
 - Nim 2.4.0 (any recent 2.x should work).
 - Output binary is `sdl3_snake` (Unix) / `sdl3_snake.exe` (Windows), listed in
   `.gitignore`.
-- Release build (Unix): `~/.nimble/bin/nim c -d:release sdl3_snake.nim`.
+- Release build (Linux): `~/.nimble/bin/nim c -d:release sdl3_snake.nim`.
 
 ## Dependencies
 
@@ -37,6 +62,8 @@ nim c -d:release \
 ```nim
 when defined(windows):
   {.passL: "-Wl,-Bstatic -lSDL3 -Wl,-Bdynamic -lkernel32 -luser32 -lgdi32 -lwinmm -limm32 -lole32 -loleaut32 -lversion -luuid -ladvapi32 -lsetupapi -lshell32 -ldinput8".}
+elif defined(linux):
+  {.passL: "-L/usr/local/lib -Wl,-Bstatic -lSDL3 -Wl,-Bdynamic -pthread -lm".}
 else:
   {.passL: "-L/usr/local/lib -Wl,-rpath,/usr/local/lib -lSDL3".}
 ```
@@ -44,9 +71,13 @@ else:
 - **Windows**: SDL3 is linked **statically**, so the `.exe` is self-contained
   (no `SDL3.dll` beside it; only Windows system DLLs are required). SDL3 must be
   installed in the MinGW prefix (`mingw64/include/SDL3`, `mingw64/lib`).
-- **Unix (Linux/macOS)**: SDL3 is linked dynamically from `/usr/local/lib`
+- **Linux (Debian)**: SDL3 is linked **statically** from `/usr/local/lib`
+  (`libSDL3.a`, built from source — see Build & Run), producing a self-contained
+  ELF that needs no `libSDL3.so` at runtime. SDL3's X11/Wayland/audio backends
+  are still loaded dynamically, so the usual system libraries remain required.
+- **macOS (or other Unix)**: SDL3 is linked dynamically from `/usr/local/lib`
   (headers at `/usr/local/include/SDL3`), with an rpath so the binary finds
-  `libSDL3.so` at runtime.
+  `libSDL3.dylib` at runtime.
 - Only stdlib module used: `import std/random` (for food placement). No SDL
   bindings package of any kind.
 
